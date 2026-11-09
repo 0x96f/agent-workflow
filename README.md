@@ -1,57 +1,84 @@
-# Subagents
+# Agents and skills
 
-Subagents for Codex and Claude Code.
+A collection of agents and skills I use in my development and documentation workflows with Codex and Claude Code.
 
-| Agent             | Job                                                            |
-| ----------------- | -------------------------------------------------------------- |
-| explorer          | Find code and summarize in under 200 words                     |
-| fixer             | Make the smallest correct patch and run focused validation     |
-| checker           | Review the patch and callers, report checks and gaps           |
-| test-writer       | Add focused behavior and regression tests                      |
-| docs-maintainer   | Keep documentation and examples aligned with code              |
-| migration-planner | Plan upgrades and refactors with validation and rollback steps |
+Agents handle specific jobs, such as finding code, planning changes, or reviewing a patch. Skills coordinate those agents through a larger task.
 
-## Install
+## Agents
 
-Requires Bash on macOS or Linux. Run without arguments for interactive choices:
+Each agent has a definition for [Codex](agents/codex/) and [Claude Code](agents/claude/).
+
+| Name | Description |
+| --- | --- |
+| `explorer` | Finds relevant files, symbols, and callers. Returns a summary under 200 words with code references, without changing files. |
+| `planner` | Investigates a fix or feature and returns a plan with acceptance criteria, ordered changes, validation, and risks. Does not edit files. |
+| `fixer` | Makes the smallest correct patch for an identified issue and runs focused checks when practical. |
+| `checker` | Reviews a completed patch and its callers for regressions. Reports findings, checks performed, and verification gaps without editing source files. |
+| `test-writer` | Adds and runs focused tests for changed behavior, regressions, edge cases, and failure paths. |
+| `docs-maintainer` | Creates and updates documentation grounded in the code, including READMEs, guides, API references, architecture docs, and runbooks. |
+| `docs-reviewer` | Checks documentation against the implementation for accuracy, missing steps, broken links, and usable examples. Reports findings without editing files. |
+| `migration-planner` | Plans dependency upgrades, compatibility changes, and larger refactors, including affected files, ordered steps, validation, and rollback options. Does not edit files. |
+
+## Skills
+
+The same skill definitions work with both clients.
+
+| Name | Description |
+| --- | --- |
+| [dev-workflow](skills/dev-workflow/SKILL.md) | Coordinates agents for substantial bugs, features, and migrations. Selects the needed roles, assigns file ownership, sequences dependent work, and arranges validation and patch review. |
+| [docs-workflow](skills/docs-workflow/SKILL.md) | Coordinates research, writing, and review to create or substantially revise repository documentation. Checks the result against the implementation and the reader's task. |
+
+## Installation
+
+Requires Bash on macOS or Linux. Run the installer from this repository for interactive client and scope selection:
 
 ```sh
 ./install.sh
 ```
 
-Or use flags. Defaults are all clients and local scope:
+Or choose explicitly:
 
 ```sh
+# Install for both clients globally
 ./install.sh --agent all --global
+
+# Install for Codex in the current directory
 ./install.sh --agent codex --local
+
+# Install for Claude Code in an existing project
 ./install.sh --agent claude --local "/path/to/my project"
 ```
 
-Local installs target the current directory unless a path follows `--local`.
-The project directory must exist. Run `./install.sh --help` for usage.
+The installer copies all agents and skills for the selected clients. With flags, the defaults are both clients and local scope. Local installs use the current directory unless a path follows `--local`.
 
-| Client      | Global destination  | Local destination           |
-| ----------- | ------------------- | --------------------------- |
-| Codex       | `~/.codex/agents/`  | `<project>/.codex/agents/`  |
-| Claude Code | `~/.claude/agents/` | `<project>/.claude/agents/` |
+| Client | Global destination | Local destination |
+| --- | --- | --- |
+| Codex | `~/.codex/agents/` and `~/.codex/skills/` | `<project>/.codex/agents/` and `<project>/.codex/skills/` |
+| Claude Code | `~/.claude/agents/` and `~/.claude/skills/` | `<project>/.claude/agents/` and `<project>/.claude/skills/` |
 
-Global paths respect `CODEX_HOME` and `CLAUDE_CONFIG_DIR`. The script copies the
-agent files, skips identical files, and backs up changed files as
-`.bak.<timestamp>.<pid>`. Re-run it after editing the source agents.
+Global installs respect `CODEX_HOME` and `CLAUDE_CONFIG_DIR`. The installer skips identical content and backs up changed files or folders as `.bak.<timestamp>.<pid>`. Restart the selected clients after installation. Run `./install.sh --help` for usage.
 
-Restart your client after installation. Ask it to delegate to the agent that
-fits the task. Use `explorer` to locate relevant code, `fixer` for an identified
-issue, or `checker` to review a completed patch. These agents can be used
-independently. The fixer reports validation results; the checker reports findings,
-checks performed, and verification gaps without editing source files or running
-autofix commands. Codex models must be
-available to your account; change them in `agents/codex/*.toml` if needed.
-Use `test-writer` for behavior coverage, `docs-maintainer` for documentation
-updates, and `migration-planner` to plan a migration before implementation.
-The migration planner returns a plan without editing files.
-See the [OpenAI custom agent documentation](https://learn.chatgpt.com/docs/agent-configuration/subagents#custom-agents).
+## Usage
 
-## Remove
+Ask your client to delegate to an agent by name:
 
-Delete the installed agent files. Restore adjacent `.bak.*` files if needed.
-Review local configuration changes before committing them.
+```text
+Use planner to plan a fix for duplicate submissions when Save is clicked twice.
+```
+
+For a coordinated workflow, invoke a skill. In Codex:
+
+```text
+Use $dev-workflow to fix duplicate submissions when Save is clicked twice.
+Use $docs-workflow to create an onboarding guide based on this repository's setup and test commands.
+```
+
+In Claude Code, use `/dev-workflow` or `/docs-workflow` followed by the task. Agents can also be used independently of the skills.
+
+## Customization and removal
+
+Edit agent instructions and model choices in `agents/codex/*.toml` and `agents/claude/*.md`. Choose models available to your account.
+
+Add skills at `skills/<skill-name>/SKILL.md`, with supporting files in the same folder. The installer discovers each immediate subfolder containing `SKILL.md` and copies the entire folder. Re-run it after changing the sources to update installed copies.
+
+To remove an installation, delete the installed agent files and skill folders. Restore adjacent `.bak.*` backups if needed. Review local configuration changes before committing them.
